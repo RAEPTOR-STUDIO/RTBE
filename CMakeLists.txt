@@ -5,11 +5,13 @@ find_package(Cog CONFIG REQUIRED)
 CogCreate(${PROJECT_NAME}
   src/RaeptorCogs/${PROJECT_NAME}/rtbe.c
 )
+CogLoad("../ExampleCog" ExampleCog)
 CogLoad("../PrimeMover" PrimeMover)
 CogLoad("../RaylibCog" RaylibCog)
 
 CogStarterSetEntryPoint(PrimeMover)
 CogStarterSetType(Static)
+CogStarterAddCogs(ExampleCog)
 CogStarterAddCogs(${PROJECT_NAME})
 CogStarterAddCogs(RaylibCog)
 CogStarterCreate()
