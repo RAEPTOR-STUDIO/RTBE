@@ -11,7 +11,7 @@ CogLoad("../RaylibCog" RaylibCog)
 
 CogStarterSetEntryPoint(PrimeMover)
 CogStarterSetType(Static)
-CogStarterAddCogs(ExampleCog)
+# CogStarterAddCogs(ExampleCog)
 CogStarterAddCogs(${PROJECT_NAME})
 CogStarterAddCogs(RaylibCog)
 CogStarterCreate()
