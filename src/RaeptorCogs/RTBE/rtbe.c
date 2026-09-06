@@ -1,16 +1,18 @@
 #include <RaeptorCogs/Cog/cog.h>
 #include <RaeptorCogs/Cog/function_registry.h>
 #include <RaeptorCogs/Cog/info.h>
+#include <RaeptorCogs/Domain/PannelCog/dock.h>
+#include <RaeptorCogs/Domain/PrimeMover/cog.h>
+#include <RaeptorCogs/Domain/PrimeMover/job.h>
+#include <RaeptorCogs/Domain/PrimeMover/logger.h>
+#include <RaeptorCogs/Domain/WindowCog/window.h>
 #include <stdio.h>
 
 void test_job_callback() {
-  ((void (*)(FILE *, const char *))shared_context->fn_registry.get(
-      "logger_log"))(stdout, "Test job executed.");
-  ((void (*)(const char *))shared_context->fn_registry.get("unload_cog"))(
-      "ExampleCog");
+  RaeptorPrimeMover_logger_log_api()(stdout, "Test job executed.");
 }
 
-void logger_log(FILE *out, const char *message) {
+void RaeptorPrimeMover_logger_log(FILE *out, const char *message) {
   fputc('[', out);
   fputs(cog_name(), out);
   fputs("] ", out);
@@ -20,25 +22,45 @@ void logger_log(FILE *out, const char *message) {
 
 const char *text(void) { return "This is a text from RTBE!"; }
 
-void lazy_load_job_callback() {
-  ((void (*)(const char *))shared_context->fn_registry.get("load_cog"))(
-      "ExampleCog");
+void window_destroy_callback() { RaeptorWindowCog_window_destroy_api()(); }
+
+void loop() {
+  if (RaeptorPannelCog_draw_docks_api()) {
+    RaeptorPannelCog_draw_docks_api()();
+  }
 }
 
+RaeptorParallel_job_t *window_job;
+void main_loop() {
+  if (RaeptorWindowCog_window_loop_api()(loop)) {
+    RaeptorParallel_job_t *destroy_job = RaeptorParallel_job_create();
+    RaeptorParallel_job_set_execute(destroy_job, window_destroy_callback);
+    RaeptorPrimeMover_add_job_api()(destroy_job, -1);
+    RaeptorPrimeMover_remove_job_api()(window_job);
+  }
+}
 void cog_on_attach(void) {
-  shared_context->fn_registry.bind("logger_log", logger_log);
-  shared_context->fn_registry.bind("text", text);
+  BindFunction(RaeptorPrimeMover_logger_log);
+  BindFunction(text);
+}
 
-  job_t *lazy_load_job = job_create();
-  job_set_execute(lazy_load_job, lazy_load_job_callback);
-  worker_add_job(&shared_context->workers.main_worker, lazy_load_job, -1);
+void cog_on_start() {
+  RaeptorPrimeMover_load_cog_api()("ExampleCog");
+  RaeptorPrimeMover_unload_cog_api()("ExampleCog");
 
-  job_t *test_job = job_create();
-  job_set_execute(test_job, test_job_callback);
-  worker_add_job(&shared_context->workers.main_worker, test_job, 0);
+  RaeptorParallel_job_t *test_job = RaeptorParallel_job_create();
+  RaeptorParallel_job_set_execute(test_job, test_job_callback);
+  RaeptorPrimeMover_add_job_api()(test_job, 0);
+
+  RaeptorWindowCog_window_create_api()();
+  RaeptorWindowCog_window_set_target_fps_api()(60);
+  window_job = RaeptorParallel_job_create();
+  RaeptorParallel_job_set_execute(window_job, main_loop);
+  RaeptorParallel_job_set_repeat_count(window_job, -1);
+  RaeptorPrimeMover_add_job_api()(window_job, 100);
 }
 
 void cog_on_detach(void) {
-  shared_context->fn_registry.unbind("logger_log", logger_log);
-  shared_context->fn_registry.unbind("text", text);
+  UnbindFunction(RaeptorPrimeMover_logger_log);
+  UnbindFunction(text);
 }
